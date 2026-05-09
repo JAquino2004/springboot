@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carrito de Compras</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f4f4f4;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    input {
+      margin: 5px;
+      padding: 8px;
+      width: 200px;
+    }
+
+    button {
+      padding: 10px 15px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff;
+      color: white;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: #eee;
+      margin: 5px 0;
+      padding: 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Carrito de Compras</h1>
+
+  <div class="card">
+    <h2>Crear Producto</h2>
+
+    <input type="text" id="nombre" placeholder="Nombre">
+    <input type="number" id="precio" placeholder="Precio">
+    <input type="number" id="stock" placeholder="Stock">
+
+    <button onclick="crearProducto()">Crear Producto</button>
+  </div>
+
+  <div class="card">
+    <h2>Productos</h2>
+
+    <button onclick="cargarProductos()">Actualizar Productos</button>
+
+    <ul id="listaProductos"></ul>
+  </div>
+
+  <div class="card">
+    <h2>Carrito</h2>
+
+    <button onclick="crearCarrito()">Crear Carrito</button>
+    <button onclick="cargarCarritos()">Ver Carritos</button>
+
+    <p id="carritoId"></p>
+
+    <input type="number" id="carritoSeleccionado" placeholder="ID Carrito">
+    <button onclick="usarCarrito()">Usar Carrito</button>
+
+    <input type="number" id="productoId" placeholder="ID Producto">
+    <input type="number" id="cantidad" placeholder="Cantidad">
+
+    <button onclick="agregarProducto()">Agregar al Carrito</button>
+
+    <button onclick="verTotal()">Ver Total</button>
+
+    <h3 id="total"></h3>
+
+    <h3>Carritos Disponibles</h3>
+    <ul id="listaCarritos"></ul>
+  </div>
+
+  <script>
+
+    const API = 'http://localhost:8081';
+
+    let carritoActual = null;
+
+    function usarCarrito() {
+      carritoActual = document.getElementById('carritoSeleccionado').value;
+
+      document.getElementById('carritoId').innerText =
+        'Carrito actual ID: ' + carritoActual;
+    }
+
+    async function crearProducto() {
+
+      const producto = {
+        nombre: document.getElementById('nombre').value,
+        precio: parseFloat(document.getElementById('precio').value),
+        stock: parseInt(document.getElementById('stock').value)
+      };
+
+      const response = await fetch(`${API}/productos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(producto)
+      });
+
+      const data = await response.json();
+
+      alert('Producto creado con ID: ' + data.id);
+
+      cargarProductos();
+    cargarCarritos();
+    }
+
+    async function cargarProductos() {
+
+      const response = await fetch(`${API}/productos`);
+
+      const productos = await response.json();
+
+      const lista = document.getElementById('listaProductos');
+
+      lista.innerHTML = '';
+
+      productos.forEach(p => {
+
+        const li = document.createElement('li');
+
+        li.innerHTML = `
+          ID: ${p.id} |
+          ${p.nombre} |
+          Precio: Q${p.precio} |
+          Stock: ${p.stock}
+        `;
+
+        lista.appendChild(li);
+      });
+    }
+
+    async function cargarCarritos() {
+
+      const response = await fetch(`${API}/carrito/listar`);
+
+      const carritos = await response.json();
+
+      const lista = document.getElementById('listaCarritos');
+
+      lista.innerHTML = '';
+
+      carritos.forEach(c => {
+
+        const li = document.createElement('li');
+
+        li.innerHTML = `Carrito ID: ${c.id}`;
+
+        lista.appendChild(li);
+      });
+    }
+
+    async function crearCarrito() {
+
+      const response = await fetch(`${API}/carrito`, {
+        method: 'POST'
+      });
+
+      const carrito = await response.json();
+
+      carritoActual = carrito.id;
+
+      document.getElementById('carritoId').innerText =
+        'Carrito actual ID: ' + carritoActual;
+
+      alert('Carrito creado');
+
+      cargarCarritos();
+    }
+
+    async function agregarProducto() {
+
+      if (!carritoActual) {
+        alert('Primero crea un carrito');
+        return;
+      }
+
+      const productoId = document.getElementById('productoId').value;
+      const cantidad = document.getElementById('cantidad').value;
+
+      await fetch(
+        `${API}/carrito/${carritoActual}/agregar?productoId=${productoId}&cantidad=${cantidad}`,
+        {
+          method: 'POST'
+        }
+      );
+
+      alert('Producto agregado al carrito');
+    }
+
+    async function verTotal() {
+
+      if (!carritoActual) {
+        alert('Primero crea un carrito');
+        return;
+      }
+
+      const response = await fetch(
+        `${API}/carrito/${carritoActual}/total`
+      );
+
+      const total = await response.text();
+
+      document.getElementById('total').innerText =
+        'Total: Q' + total;
+    }
+
+    cargarProductos();
+
+  </script>
+
+</body>
+</html>
